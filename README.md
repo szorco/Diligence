@@ -1,23 +1,30 @@
-# Diligence: A schedule planning website that provides users a quick and easy way to create daily/weekly schedules
+# 🗓️ Diligence  
+*A schedule planning website that provides users a quick and easy way to create daily/weekly schedules.*
 
+---
 
-Main Function: 
-- User daily and weekly schedule
-- User can create "task blocks" that represent events that they often do. "Drag and drop" these so users can create schedules fast; (ex: User has 2 hours of soccer practice everyday, but times vary by day. User can create a 2 hour "soccer practice" event and use this block for each day of that week to create a schedule for the week.)
+## 🚀 Tech Stack
+- **Frontend:** React (deployed on [Vercel](https://vercel.com/))  
+- **Backend:** FastAPI (deployed on [Render](https://render.com/))  
+- **Database:** PostgreSQL (hosted on [Supabase](https://supabase.com/))  
 
-Other Functions:
-- User can upload RPI schedule
-- User has RobinHood inspired dashboard to see progress
+---
 
-Other Ideas:
-- AI wrapper that provides insight into schedule or other advice
+## 📌 Main Features
+- Create **daily and weekly schedules**  
+- Build reusable **“task blocks”** for recurring events  
+  - Example: User has 2 hours of soccer practice every day, but times vary → create a 2-hour *“soccer practice”* block and reuse it across the week  
+- **Drag-and-drop scheduling** for fast, intuitive planning  
 
+---
 
-Tech Stack:
-- Frontend: React (deployed on Vercel)
-- Backend: FastAPI (deployed on Render)
-- Database: PostgreSQL (hosted on Supabase)
+## ⚡ Other Functions
+- Upload RPI schedule  
+- Robinhood-inspired dashboard to track progress  
 
+---
 
+## 💡 Future Ideas
+- AI-powered insights and scheduling advice  
 
-
+---
