@@ -14,9 +14,9 @@ Other Ideas:
 
 
 Tech Stack:
-Frontend: React (deployed on Vercel)
-Backend: FastAPI (deployed on Render)
-Database: PostgreSQL (hosted on Supabase)
+- Frontend: React (deployed on Vercel)
+- Backend: FastAPI (deployed on Render)
+- Database: PostgreSQL (hosted on Supabase)
 
 
 
