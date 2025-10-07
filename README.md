@@ -66,7 +66,7 @@ DATABASE_URL=postgresql://<user>:<password>@<host>:5432/<dbname>
 ```bash
 cd frontend
 npm install
-npm run dev
+npm start
 ```
 
 **Runs at:** `http://localhost:3000`
