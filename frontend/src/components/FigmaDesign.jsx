@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Menu, X, ChevronRight, CheckCircle, Star, Users, TrendingUp, Shield } from 'lucide-react';
 
-export default function FigmaDesign() {
+export default function FigmaDesign({ onGetStarted }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -68,7 +68,10 @@ export default function FigmaDesign() {
               The ultimate productivity platform that helps teams collaborate, track progress, and achieve their goals efficiently.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <button className="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 transition flex items-center justify-center text-lg font-semibold">
+              <button 
+                onClick={onGetStarted}
+                className="bg-blue-600 text-white px-8 py-4 rounded-lg hover:bg-blue-700 transition flex items-center justify-center text-lg font-semibold"
+              >
                 Start Free Trial
                 <ChevronRight className="ml-2" size={20} />
               </button>
@@ -167,7 +170,10 @@ export default function FigmaDesign() {
             <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl p-8 text-white shadow-2xl">
               <h3 className="text-3xl font-bold mb-4">Ready to get started?</h3>
               <p className="text-blue-100 mb-6 text-lg">Join thousands of teams already using Diligence</p>
-              <button className="bg-white text-blue-600 px-8 py-4 rounded-lg hover:bg-gray-100 transition font-semibold w-full">
+              <button 
+                onClick={onGetStarted}
+                className="bg-white text-blue-600 px-8 py-4 rounded-lg hover:bg-gray-100 transition font-semibold w-full"
+              >
                 Start Your Free Trial
               </button>
               <p className="text-sm text-blue-100 mt-4 text-center">No credit card required</p>
