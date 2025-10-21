@@ -166,7 +166,7 @@ export default function WeeklyCalendar({ tasks, selectedDate, onDateSelect }) {
                 {getScheduledTasksForSlot(day, timeSlot).map((task, taskIndex) => (
                   <div
                     key={taskIndex}
-                    className={`${task.color} text-white text-xs p-2 rounded mb-1 cursor-move`}
+                    className={`${task.color} text-white text-xs p-2 rounded mb-1 cursor-move hover:shadow-md transition-all duration-200 transform hover:scale-105`}
                     draggable
                     onDragStart={(e) => handleDragStart(e, task)}
                   >

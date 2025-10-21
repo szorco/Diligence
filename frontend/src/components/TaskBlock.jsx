@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Clock, Calendar, Trash2, Edit3, Copy, CheckCircle } from 'lucide-react';
 
-export default function TaskBlock({ task, onDelete, onEdit, onDuplicate }) {
+export default function TaskBlock({ task, onDelete, onEdit, onDuplicate, onToggleComplete }) {
   const [isHovered, setIsHovered] = useState(false);
 
   const formatDuration = (minutes) => {
@@ -44,14 +44,24 @@ export default function TaskBlock({ task, onDelete, onEdit, onDuplicate }) {
         <div className="flex items-center">
           <div className={`w-3 h-3 rounded-full ${task.color} mr-3`}></div>
           <div>
-            <h3 className="font-semibold text-gray-900">{task.title}</h3>
+            <h3 className={`font-semibold ${task.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
+              {task.title}
+            </h3>
             <p className="text-sm text-gray-500">{task.category}</p>
           </div>
         </div>
         
-        {task.completed && (
-          <CheckCircle className="text-green-500" size={20} />
-        )}
+        <button
+          onClick={() => onToggleComplete && onToggleComplete(task.id)}
+          className={`p-1 rounded-full transition-colors ${
+            task.completed 
+              ? 'text-green-500 hover:text-green-600' 
+              : 'text-gray-300 hover:text-green-500'
+          }`}
+          title={task.completed ? 'Mark as incomplete' : 'Mark as complete'}
+        >
+          <CheckCircle size={20} className={task.completed ? 'fill-current' : ''} />
+        </button>
       </div>
 
       {/* Description */}

@@ -1,67 +1,172 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Calendar, Clock, CheckCircle, BarChart3, Settings, User, Bell } from 'lucide-react';
+import { Plus, Calendar, Clock, CheckCircle, BarChart3, Settings, User, Bell, Loader2 } from 'lucide-react';
 import TaskBlock from './TaskBlock';
 import WeeklyCalendar from './WeeklyCalendar';
 import TaskCreator from './TaskCreator';
 import ProgressStats from './ProgressStats';
+import Notification from './Notification';
 
 export default function Dashboard({ onBackToLanding }) {
   const [activeTab, setActiveTab] = useState('calendar');
   const [tasks, setTasks] = useState([]);
   const [showTaskCreator, setShowTaskCreator] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [isLoading, setIsLoading] = useState(true);
+  const [editingTask, setEditingTask] = useState(null);
+  const [notification, setNotification] = useState(null);
 
-  // Sample data - in real app this would come from API
+  // Load tasks from localStorage or API
   useEffect(() => {
-    const sampleTasks = [
-      {
-        id: 1,
-        title: 'Soccer Practice',
-        duration: 120, // minutes
-        color: 'bg-green-500',
-        isRecurring: true,
-        category: 'Sports',
-        description: 'Team practice session'
-      },
-      {
-        id: 2,
-        title: 'Study Session',
-        duration: 90,
-        color: 'bg-blue-500',
-        isRecurring: false,
-        category: 'Education',
-        description: 'Math and science review'
-      },
-      {
-        id: 3,
-        title: 'Gym Workout',
-        duration: 60,
-        color: 'bg-red-500',
-        isRecurring: true,
-        category: 'Fitness',
-        description: 'Strength training routine'
-      },
-      {
-        id: 4,
-        title: 'Project Meeting',
-        duration: 45,
-        color: 'bg-purple-500',
-        isRecurring: false,
-        category: 'Work',
-        description: 'Weekly team sync'
+    const loadTasks = async () => {
+      setIsLoading(true);
+      try {
+        // Try to load from localStorage first
+        const savedTasks = localStorage.getItem('diligence-tasks');
+        if (savedTasks) {
+          setTasks(JSON.parse(savedTasks));
+        } else {
+          // Load sample data
+          const sampleTasks = [
+            {
+              id: 1,
+              title: 'Soccer Practice',
+              duration: 120,
+              color: 'bg-green-500',
+              isRecurring: true,
+              category: 'Sports',
+              description: 'Team practice session',
+              completed: false
+            },
+            {
+              id: 2,
+              title: 'Study Session',
+              duration: 90,
+              color: 'bg-blue-500',
+              isRecurring: false,
+              category: 'Education',
+              description: 'Math and science review',
+              completed: false
+            },
+            {
+              id: 3,
+              title: 'Gym Workout',
+              duration: 60,
+              color: 'bg-red-500',
+              isRecurring: true,
+              category: 'Fitness',
+              description: 'Strength training routine',
+              completed: false
+            },
+            {
+              id: 4,
+              title: 'Project Meeting',
+              duration: 45,
+              color: 'bg-purple-500',
+              isRecurring: false,
+              category: 'Work',
+              description: 'Weekly team sync',
+              completed: false
+            }
+          ];
+          setTasks(sampleTasks);
+          localStorage.setItem('diligence-tasks', JSON.stringify(sampleTasks));
+        }
+      } catch (error) {
+        console.error('Error loading tasks:', error);
+      } finally {
+        setIsLoading(false);
       }
-    ];
-    setTasks(sampleTasks);
+    };
+    
+    loadTasks();
   }, []);
 
+  // Save tasks to localStorage whenever tasks change
+  useEffect(() => {
+    if (tasks.length > 0) {
+      localStorage.setItem('diligence-tasks', JSON.stringify(tasks));
+    }
+  }, [tasks]);
+
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type });
+  };
+
   const handleCreateTask = (newTask) => {
-    setTasks([...tasks, { ...newTask, id: Date.now() }]);
+    if (editingTask) {
+      // Update existing task
+      setTasks(tasks.map(task => 
+        task.id === editingTask.id ? { ...newTask, id: editingTask.id } : task
+      ));
+      setEditingTask(null);
+      showNotification('Task updated successfully!');
+    } else {
+      // Create new task
+      setTasks([...tasks, { ...newTask, id: Date.now() }]);
+      showNotification('Task created successfully!');
+    }
     setShowTaskCreator(false);
   };
 
   const handleDeleteTask = (taskId) => {
     setTasks(tasks.filter(task => task.id !== taskId));
+    showNotification('Task deleted successfully!');
   };
+
+  const handleToggleComplete = (taskId) => {
+    const task = tasks.find(t => t.id === taskId);
+    setTasks(tasks.map(task => 
+      task.id === taskId ? { ...task, completed: !task.completed } : task
+    ));
+    showNotification(task?.completed ? 'Task marked as incomplete' : 'Task completed! 🎉');
+  };
+
+  const handleEditTask = (task) => {
+    setEditingTask(task);
+    setShowTaskCreator(true);
+  };
+
+  const handleDuplicateTask = (task) => {
+    const newTask = {
+      ...task,
+      id: Date.now(),
+      title: `${task.title} (Copy)`,
+      completed: false
+    };
+    setTasks([...tasks, newTask]);
+    showNotification('Task duplicated successfully!');
+  };
+
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyPress = (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        switch (e.key) {
+          case 'n':
+            e.preventDefault();
+            setShowTaskCreator(true);
+            break;
+          case '1':
+            e.preventDefault();
+            setActiveTab('calendar');
+            break;
+          case '2':
+            e.preventDefault();
+            setActiveTab('tasks');
+            break;
+          case '3':
+            e.preventDefault();
+            setActiveTab('progress');
+            break;
+          default:
+            break;
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, []);
 
   const completedTasks = tasks.filter(task => task.completed).length;
   const totalTasks = tasks.length;
@@ -170,6 +275,7 @@ export default function Dashboard({ onBackToLanding }) {
               >
                 <Calendar className="inline mr-2" size={16} />
                 Calendar
+                <span className="ml-1 text-xs text-gray-400">(⌘1)</span>
               </button>
               <button
                 onClick={() => setActiveTab('tasks')}
@@ -181,6 +287,7 @@ export default function Dashboard({ onBackToLanding }) {
               >
                 <CheckCircle className="inline mr-2" size={16} />
                 Task Blocks
+                <span className="ml-1 text-xs text-gray-400">(⌘2)</span>
               </button>
               <button
                 onClick={() => setActiveTab('progress')}
@@ -192,6 +299,7 @@ export default function Dashboard({ onBackToLanding }) {
               >
                 <BarChart3 className="inline mr-2" size={16} />
                 Progress
+                <span className="ml-1 text-xs text-gray-400">(⌘3)</span>
               </button>
             </nav>
           </div>
@@ -227,17 +335,43 @@ export default function Dashboard({ onBackToLanding }) {
                   >
                     <Plus className="mr-2" size={16} />
                     Create Block
+                    <span className="ml-2 text-xs opacity-75">(⌘N)</span>
                   </button>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {tasks.map(task => (
-                    <TaskBlock
-                      key={task.id}
-                      task={task}
-                      onDelete={handleDeleteTask}
-                    />
-                  ))}
-                </div>
+                
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="animate-spin text-blue-600" size={32} />
+                    <span className="ml-3 text-gray-600">Loading tasks...</span>
+                  </div>
+                ) : tasks.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <CheckCircle className="text-gray-400" size={32} />
+                    </div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">No task blocks yet</h3>
+                    <p className="text-gray-600 mb-6">Create your first reusable task block to get started</p>
+                    <button
+                      onClick={() => setShowTaskCreator(true)}
+                      className="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
+                    >
+                      Create Your First Task Block
+                    </button>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {tasks.map(task => (
+                      <TaskBlock
+                        key={task.id}
+                        task={task}
+                        onDelete={handleDeleteTask}
+                        onEdit={handleEditTask}
+                        onDuplicate={handleDuplicateTask}
+                        onToggleComplete={handleToggleComplete}
+                      />
+                    ))}
+                  </div>
+                )}
               </div>
             )}
 
@@ -251,8 +385,21 @@ export default function Dashboard({ onBackToLanding }) {
       {/* Task Creator Modal */}
       {showTaskCreator && (
         <TaskCreator
-          onClose={() => setShowTaskCreator(false)}
+          onClose={() => {
+            setShowTaskCreator(false);
+            setEditingTask(null);
+          }}
           onCreateTask={handleCreateTask}
+          editingTask={editingTask}
+        />
+      )}
+
+      {/* Notification */}
+      {notification && (
+        <Notification
+          message={notification.message}
+          type={notification.type}
+          onClose={() => setNotification(null)}
         />
       )}
     </div>
