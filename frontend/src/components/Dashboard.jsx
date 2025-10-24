@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Calendar, Clock, CheckCircle, BarChart3, Settings, User, Bell, Loader2 } from 'lucide-react';
+import { Plus, Calendar, Clock, CheckCircle, BarChart3, Settings, User, Bell, Loader2, LogOut } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+import { API_URL } from '../config';
 import TaskBlock from './TaskBlock';
 import WeeklyCalendar from './WeeklyCalendar';
 import TaskCreator from './TaskCreator';
@@ -7,6 +9,7 @@ import ProgressStats from './ProgressStats';
 import Notification from './Notification';
 
 export default function Dashboard({ onBackToLanding }) {
+  const { user, logout, authenticatedFetch } = useAuth();
   const [activeTab, setActiveTab] = useState('calendar');
   const [tasks, setTasks] = useState([]);
   const [showTaskCreator, setShowTaskCreator] = useState(false);
@@ -15,24 +18,27 @@ export default function Dashboard({ onBackToLanding }) {
   const [editingTask, setEditingTask] = useState(null);
   const [notification, setNotification] = useState(null);
 
-  // Load tasks from localStorage or API
+  // API base URL is imported from config
+
+  // Load tasks from API
   useEffect(() => {
     const loadTasks = async () => {
       setIsLoading(true);
       try {
-        // Try to load from localStorage first
-        const savedTasks = localStorage.getItem('diligence-tasks');
-        if (savedTasks) {
-          setTasks(JSON.parse(savedTasks));
+        const response = await authenticatedFetch(`${API_URL}/tasks`);
+        if (response.ok) {
+          const tasksData = await response.json();
+          setTasks(tasksData);
         } else {
-          // Load sample data
+          console.error('Failed to load tasks');
+          // Fallback to sample data if API fails
           const sampleTasks = [
             {
               id: 1,
               title: 'Soccer Practice',
               duration: 120,
               color: 'bg-green-500',
-              isRecurring: true,
+              is_recurring: true,
               category: 'Sports',
               description: 'Team practice session',
               completed: false
@@ -42,7 +48,7 @@ export default function Dashboard({ onBackToLanding }) {
               title: 'Study Session',
               duration: 90,
               color: 'bg-blue-500',
-              isRecurring: false,
+              is_recurring: false,
               category: 'Education',
               description: 'Math and science review',
               completed: false
@@ -81,44 +87,94 @@ export default function Dashboard({ onBackToLanding }) {
     loadTasks();
   }, []);
 
-  // Save tasks to localStorage whenever tasks change
-  useEffect(() => {
-    if (tasks.length > 0) {
-      localStorage.setItem('diligence-tasks', JSON.stringify(tasks));
-    }
-  }, [tasks]);
+  // Tasks are now managed by the API, no need for localStorage
 
   const showNotification = (message, type = 'success') => {
     setNotification({ message, type });
   };
 
-  const handleCreateTask = (newTask) => {
-    if (editingTask) {
-      // Update existing task
-      setTasks(tasks.map(task => 
-        task.id === editingTask.id ? { ...newTask, id: editingTask.id } : task
-      ));
-      setEditingTask(null);
-      showNotification('Task updated successfully!');
-    } else {
-      // Create new task
-      setTasks([...tasks, { ...newTask, id: Date.now() }]);
-      showNotification('Task created successfully!');
+  const handleCreateTask = async (newTask) => {
+    try {
+      if (editingTask) {
+        // Update existing task
+        const response = await authenticatedFetch(`${API_URL}/tasks/${editingTask.id}`, {
+          method: 'PUT',
+          body: JSON.stringify(newTask),
+        });
+        
+        if (response.ok) {
+          const updatedTask = await response.json();
+          setTasks(tasks.map(task => 
+            task.id === editingTask.id ? updatedTask : task
+          ));
+          setEditingTask(null);
+          showNotification('Task updated successfully!');
+        } else {
+          showNotification('Failed to update task', 'error');
+        }
+      } else {
+        // Create new task
+        const response = await authenticatedFetch(`${API_URL}/tasks`, {
+          method: 'POST',
+          body: JSON.stringify(newTask),
+        });
+        
+        if (response.ok) {
+          const createdTask = await response.json();
+          setTasks([...tasks, createdTask]);
+          showNotification('Task created successfully!');
+        } else {
+          showNotification('Failed to create task', 'error');
+        }
+      }
+    } catch (error) {
+      console.error('Error saving task:', error);
+      showNotification('Failed to save task', 'error');
     }
     setShowTaskCreator(false);
   };
 
-  const handleDeleteTask = (taskId) => {
-    setTasks(tasks.filter(task => task.id !== taskId));
-    showNotification('Task deleted successfully!');
+  const handleDeleteTask = async (taskId) => {
+    try {
+      const response = await authenticatedFetch(`${API_URL}/tasks/${taskId}`, {
+        method: 'DELETE',
+      });
+      
+      if (response.ok) {
+        setTasks(tasks.filter(task => task.id !== taskId));
+        showNotification('Task deleted successfully!');
+      } else {
+        showNotification('Failed to delete task', 'error');
+      }
+    } catch (error) {
+      console.error('Error deleting task:', error);
+      showNotification('Failed to delete task', 'error');
+    }
   };
 
-  const handleToggleComplete = (taskId) => {
-    const task = tasks.find(t => t.id === taskId);
-    setTasks(tasks.map(task => 
-      task.id === taskId ? { ...task, completed: !task.completed } : task
-    ));
-    showNotification(task?.completed ? 'Task marked as incomplete' : 'Task completed! 🎉');
+  const handleToggleComplete = async (taskId) => {
+    try {
+      const task = tasks.find(t => t.id === taskId);
+      const updatedTask = { ...task, completed: !task.completed };
+      
+      const response = await authenticatedFetch(`${API_URL}/tasks/${taskId}`, {
+        method: 'PUT',
+        body: JSON.stringify(updatedTask),
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        setTasks(tasks.map(task => 
+          task.id === taskId ? result : task
+        ));
+        showNotification(task?.completed ? 'Task marked as incomplete' : 'Task completed! 🎉');
+      } else {
+        showNotification('Failed to update task', 'error');
+      }
+    } catch (error) {
+      console.error('Error updating task:', error);
+      showNotification('Failed to update task', 'error');
+    }
   };
 
   const handleEditTask = (task) => {
@@ -200,8 +256,15 @@ export default function Dashboard({ onBackToLanding }) {
                 <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center">
                   <User size={16} className="text-white" />
                 </div>
-                <span className="text-sm font-medium text-gray-700">John Doe</span>
+                <span className="text-sm font-medium text-gray-700">{user?.name || 'User'}</span>
               </div>
+              <button
+                onClick={logout}
+                className="flex items-center space-x-2 text-gray-600 hover:text-red-600 transition ml-4"
+              >
+                <LogOut className="h-4 w-4" />
+                <span>Logout</span>
+              </button>
             </div>
           </div>
         </div>
