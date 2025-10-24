@@ -1,8 +1,8 @@
-# 🔐 Authentication Setup Guide
+# Authentication Setup Guide
 
 This guide will help you set up user authentication for the Diligence app.
 
-## 📋 What's Been Implemented
+##  What's Been Implemented
 
 ### Backend Changes
 -  **Database Schema**: Complete user authentication tables
@@ -43,7 +43,7 @@ Edit `backend/db.py` and `backend/auth.py` to use your actual database credentia
 
 ```python
 # Replace this line in both files:
-conn_string = "postgresql://postgres:YOUR_PASSWORD@db.yhemeqmzqprdasvchttj.supabase.co:5432/postgres"
+conn_string = "postgresql://postgres:founder2025$@db.yhemeqmzqprdasvchttj.supabase.co:5432/postgres"
 ```
 
 ### 4. Start Backend Server

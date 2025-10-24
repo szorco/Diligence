@@ -4,7 +4,7 @@ Database setup script for Diligence app
 Run this script to initialize the database with the complete schema
 """
 
-
+import psycopg2
 import os
 from pathlib import Path
 
@@ -70,11 +70,7 @@ if __name__ == "__main__":
     print("🗄️  Diligence Database Setup")
     print("=" * 40)
     
-    # Check if database credentials are updated
-    if "YOUR_PASSWORD" in conn_string:
-        print("⚠️  Please update the database connection string in this script first!")
-        print("   Edit the conn_string variable with your actual database credentials.")
-        exit(1)
+
     
     success = setup_database()
     
