@@ -5,19 +5,19 @@ This guide will help you set up user authentication for the Diligence app.
 ## 📋 What's Been Implemented
 
 ### Backend Changes
-- ✅ **Database Schema**: Complete user authentication tables
-- ✅ **JWT Authentication**: Secure token-based authentication
-- ✅ **Password Hashing**: Bcrypt password security
-- ✅ **User-Specific Data**: Tasks are now tied to users
-- ✅ **API Endpoints**: Login, signup, and protected routes
+-  **Database Schema**: Complete user authentication tables
+-  **JWT Authentication**: Secure token-based authentication
+-  **Password Hashing**: Bcrypt password security
+-  **User-Specific Data**: Tasks are now tied to users
+-  **API Endpoints**: Login, signup, and protected routes
 
 ### Frontend Changes
-- ✅ **Login/Signup Pages**: Beautiful forms matching your design
-- ✅ **Authentication Context**: Global auth state management
-- ✅ **Protected Routes**: Dashboard requires authentication
-- ✅ **API Integration**: All task operations now use authenticated API
+-  **Login/Signup Pages**: Beautiful forms matching your design
+-  **Authentication Context**: Global auth state management
+-  **Protected Routes**: Dashboard requires authentication
+-  **API Integration**: All task operations now use authenticated API
 
-## 🚀 Quick Setup
+##  Quick Setup
 
 ### 1. Database Setup
 
@@ -102,7 +102,7 @@ REACT_APP_API_URL=https://your-backend-url.com
 3. Logout and login with a different account
 4. You should see only your own tasks
 
-## 📊 Database Schema
+##  Database Schema
 
 The following tables are created:
 
@@ -130,7 +130,7 @@ The following tables are created:
 - **Token Expiration**: Tokens expire after 30 minutes
 - **Protected Routes**: All task operations require authentication
 
-## 🐛 Troubleshooting
+##  Troubleshooting
 
 ### Common Issues
 
@@ -182,7 +182,7 @@ After authentication is working:
 4. **User Profiles**: Allow users to update their profiles
 5. **Admin Panel**: Create admin interface for user management
 
-## 📝 API Endpoints
+##  API Endpoints
 
 ### Authentication
 - `POST /auth/register` - Register new user
