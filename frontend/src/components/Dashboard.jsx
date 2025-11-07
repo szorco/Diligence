@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Plus, Calendar, Clock, CheckCircle, BarChart3, Settings, User, Bell, Loader2, LogOut } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { API_URL } from '../config';
@@ -12,6 +12,7 @@ export default function Dashboard({ onBackToLanding }) {
   const { user, logout, authenticatedFetch } = useAuth();
   const [activeTab, setActiveTab] = useState('calendar');
   const [tasks, setTasks] = useState([]);
+  const [scheduledTasks, setScheduledTasks] = useState([]);
   const [showTaskCreator, setShowTaskCreator] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [isLoading, setIsLoading] = useState(true);
@@ -20,72 +21,82 @@ export default function Dashboard({ onBackToLanding }) {
 
   // API base URL is imported from config
 
-  // Load tasks from API
-  useEffect(() => {
-    const loadTasks = async () => {
-      setIsLoading(true);
-      try {
-        const response = await authenticatedFetch(`${API_URL}/tasks`);
-        if (response.ok) {
-          const tasksData = await response.json();
-          setTasks(tasksData);
-        } else {
-          console.error('Failed to load tasks');
-          // Fallback to sample data if API fails
-          const sampleTasks = [
-            {
-              id: 1,
-              title: 'Soccer Practice',
-              duration: 120,
-              color: 'bg-green-500',
-              is_recurring: true,
-              category: 'Sports',
-              description: 'Team practice session',
-              completed: false
-            },
-            {
-              id: 2,
-              title: 'Study Session',
-              duration: 90,
-              color: 'bg-blue-500',
-              is_recurring: false,
-              category: 'Education',
-              description: 'Math and science review',
-              completed: false
-            },
-            {
-              id: 3,
-              title: 'Gym Workout',
-              duration: 60,
-              color: 'bg-red-500',
-              isRecurring: true,
-              category: 'Fitness',
-              description: 'Strength training routine',
-              completed: false
-            },
-            {
-              id: 4,
-              title: 'Project Meeting',
-              duration: 45,
-              color: 'bg-purple-500',
-              isRecurring: false,
-              category: 'Work',
-              description: 'Weekly team sync',
-              completed: false
-            }
-          ];
-          setTasks(sampleTasks);
-          localStorage.setItem('diligence-tasks', JSON.stringify(sampleTasks));
-        }
-      } catch (error) {
-        console.error('Error loading tasks:', error);
-      } finally {
-        setIsLoading(false);
+  // Load tasks and scheduled tasks
+  const loadTasks = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const startDate = new Date(selectedDate);
+      startDate.setDate(selectedDate.getDate() - 7); // Get data for previous week
+      const endDate = new Date(selectedDate);
+      endDate.setDate(selectedDate.getDate() + 14); // And next two weeks
+      
+      // Load regular tasks and scheduled tasks in parallel
+      const [tasksResponse, scheduledResponse] = await Promise.all([
+        authenticatedFetch(`${API_URL}/tasks`),
+        authenticatedFetch(`${API_URL}/scheduled-tasks?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`)
+      ]);
+
+      // Handle tasks response
+      if (tasksResponse.ok) {
+        const tasksData = await tasksResponse.json();
+        setTasks(tasksData);
+      } else {
+        console.error('Failed to load tasks');
+        // Fallback to sample data if API fails
+        const sampleTasks = [
+          {
+            id: 1,
+            title: 'Soccer Practice',
+            duration: 120,
+            color: 'bg-green-500',
+            is_recurring: true,
+            category: 'Sports',
+            description: 'Team practice session',
+            completed: false
+          },
+          {
+            id: 2,
+            title: 'Study Session',
+            duration: 90,
+            color: 'bg-blue-500',
+            is_recurring: true,
+            category: 'Education',
+            description: 'Math and Science review',
+            completed: false
+          }
+        ];
+        setTasks(sampleTasks);
       }
-    };
-    
+
+      // Handle scheduled tasks response
+      if (scheduledResponse.ok) {
+        const scheduledData = await scheduledResponse.json();
+        // Convert string dates back to Date objects
+        const formattedScheduledTasks = scheduledData.map(task => ({
+          ...task,
+          scheduledDay: new Date(task.scheduledDay),
+          createdAt: task.createdAt ? new Date(task.createdAt) : null,
+          updatedAt: task.updatedAt ? new Date(task.updatedAt) : null
+        }));
+        setScheduledTasks(formattedScheduledTasks);
+      } else {
+        console.error('Failed to load scheduled tasks');
+        setScheduledTasks([]);
+      }
+    } catch (error) {
+      console.error('Error loading data:', error);
+      setTasks([]);
+      setScheduledTasks([]);
+      setNotification({ type: 'error', message: 'Failed to load data' });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedDate, authenticatedFetch]);
+
+  // Add effect to reload tasks when selectedDate changes
+  useEffect(() => {
     loadTasks();
-  }, []);
+  }, [loadTasks]);
 
   // Tasks are now managed by the API, no need for localStorage
 
@@ -189,40 +200,36 @@ export default function Dashboard({ onBackToLanding }) {
       title: `${task.title} (Copy)`,
       completed: false
     };
-    setTasks([...tasks, newTask]);
-    showNotification('Task duplicated successfully!');
+    setTasks(prevTasks => [...prevTasks, newTask]);
+    setNotification({ type: 'success', message: 'Task duplicated successfully' });
   };
 
-  // Keyboard shortcuts
-  useEffect(() => {
-    const handleKeyPress = (e) => {
-      if (e.ctrlKey || e.metaKey) {
-        switch (e.key) {
-          case 'n':
-            e.preventDefault();
-            setShowTaskCreator(true);
-            break;
-          case '1':
-            e.preventDefault();
-            setActiveTab('calendar');
-            break;
-          case '2':
-            e.preventDefault();
-            setActiveTab('tasks');
-            break;
-          case '3':
-            e.preventDefault();
-            setActiveTab('progress');
-            break;
-          default:
-            break;
-        }
+  const handleKeyPress = useCallback((e) => {
+    // Ctrl+1, Ctrl+2, Ctrl+3 for navigation
+    if (e.ctrlKey) {
+      switch (e.key) {
+        case '1':
+          e.preventDefault();
+          setActiveTab('calendar');
+          break;
+        case '2':
+          e.preventDefault();
+          setActiveTab('tasks');
+          break;
+        case '3':
+          e.preventDefault();
+          setActiveTab('progress');
+          break;
+        default:
+          break;
       }
-    };
+    }
+  }, []);
 
+  useEffect(() => {
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, []);
+  }, [handleKeyPress]);
 
   const completedTasks = tasks.filter(task => task.completed).length;
   const totalTasks = tasks.length;
@@ -384,6 +391,55 @@ export default function Dashboard({ onBackToLanding }) {
                   tasks={tasks}
                   selectedDate={selectedDate}
                   onDateSelect={setSelectedDate}
+                  scheduledTasks={scheduledTasks}
+                  onScheduleTask={async (task) => {
+                    try {
+                      const response = await authenticatedFetch(`${API_URL}/scheduled-tasks`, {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                          taskId: task.id,
+                          scheduledDay: task.scheduledDay.toISOString(),
+                          scheduledTime: task.scheduledTime,
+                          endTime: task.endTime
+                        })
+                      });
+                      
+                      if (response.ok) {
+                        const newScheduledTask = await response.json();
+                        setScheduledTasks([...scheduledTasks, {
+                          ...newScheduledTask,
+                          scheduledDay: new Date(newScheduledTask.scheduledDay),
+                          ...tasks.find(t => t.id === task.id)
+                        }]);
+                        setNotification({ type: 'success', message: 'Task scheduled successfully!' });
+                      } else {
+                        throw new Error('Failed to schedule task');
+                      }
+                    } catch (error) {
+                      console.error('Error scheduling task:', error);
+                      setNotification({ type: 'error', message: 'Failed to schedule task' });
+                    }
+                  }}
+                  onDeleteScheduledTask={async (taskId) => {
+                    try {
+                      const response = await authenticatedFetch(`${API_URL}/scheduled-tasks/${taskId}`, {
+                        method: 'DELETE'
+                      });
+                      
+                      if (response.ok) {
+                        setScheduledTasks(scheduledTasks.filter(t => t.id !== taskId));
+                        setNotification({ type: 'success', message: 'Scheduled task removed' });
+                      } else {
+                        throw new Error('Failed to delete scheduled task');
+                      }
+                    } catch (error) {
+                      console.error('Error deleting scheduled task:', error);
+                      setNotification({ type: 'error', message: 'Failed to remove scheduled task' });
+                    }
+                  }}
                 />
               </div>
             )}
