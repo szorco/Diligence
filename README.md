@@ -31,6 +31,7 @@ A schedule planning website that provides users a quick and easy way to create d
 ## 💡 Future Ideas
 
 - 🤖 AI-powered insights and scheduling advice
+- 📅 Last updated: 2025-10-29
 
 ---
 
