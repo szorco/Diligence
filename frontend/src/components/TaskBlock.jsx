@@ -126,4 +126,4 @@ export default function TaskBlock({ task, onDelete, onEdit, onDuplicate, onToggl
       </div>
     </div>
   );
-}
+} //here
