@@ -1,8 +1,21 @@
 import React, { useState } from 'react';
-import { Clock, Calendar, Trash2, Edit3, Copy, CheckCircle } from 'lucide-react';
+import { Clock, Calendar, Trash2, Edit3, Copy, CheckCircle, Flag } from 'lucide-react';
 
 export default function TaskBlock({ task, onDelete, onEdit, onDuplicate, onToggleComplete }) {
   const [isHovered, setIsHovered] = useState(false);
+
+  const getPriorityColor = (priority) => {
+    switch (priority?.toLowerCase()) {
+      case 'high':
+        return 'text-red-500';
+      case 'medium':
+        return 'text-yellow-500';
+      case 'low':
+        return 'text-green-500';
+      default:
+        return 'text-gray-400';
+    }
+  };
 
   const formatDuration = (minutes) => {
     const hours = Math.floor(minutes / 60);
@@ -41,8 +54,17 @@ export default function TaskBlock({ task, onDelete, onEdit, onDuplicate, onToggl
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
-        <div className="flex items-center">
-          <div className={`w-3 h-3 rounded-full ${task.color} mr-3`}></div>
+        <div className="flex items-start space-x-3">
+          <div className="flex flex-col items-center">
+            <div className={`w-3 h-3 rounded-full ${task.color} mb-1`}></div>
+            {task.priority && (
+              <Flag 
+                size={12} 
+                className={`${getPriorityColor(task.priority)} ${task.completed ? 'opacity-50' : ''}`} 
+                fill={task.priority.toLowerCase() === 'high' ? 'currentColor' : 'none'}
+              />
+            )}
+          </div>
           <div>
             <h3 className={`font-semibold ${task.completed ? 'line-through text-gray-500' : 'text-gray-900'}`}>
               {task.title}
