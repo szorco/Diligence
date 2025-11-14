@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Calendar, Clock, CheckCircle, BarChart3, Settings, User, Bell, Loader2, LogOut } from 'lucide-react';
+import { Plus, Calendar, Clock, CheckCircle, BarChart3, Settings, User, Bell, Loader2, LogOut, ArrowUpDown, Filter } from 'lucide-react';
+import TaskControls from './TaskControls';
 import { useAuth } from '../contexts/AuthContext';
 import { API_URL } from '../config';
 import TaskBlock from './TaskBlock';
@@ -12,6 +13,9 @@ export default function Dashboard({ onBackToLanding }) {
   const { user, logout, authenticatedFetch } = useAuth();
   const [activeTab, setActiveTab] = useState('calendar');
   const [tasks, setTasks] = useState([]);
+  const [sortBy, setSortBy] = useState('priority');
+  const [sortOrder, setSortOrder] = useState('asc');
+  const [activeFilter, setActiveFilter] = useState('all');
   const [scheduledTasks, setScheduledTasks] = useState([]);
   const [showTaskCreator, setShowTaskCreator] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -202,6 +206,58 @@ export default function Dashboard({ onBackToLanding }) {
     };
     setTasks(prevTasks => [...prevTasks, newTask]);
     setNotification({ type: 'success', message: 'Task duplicated successfully' });
+  };
+
+  // Handle sort change
+  const handleSortChange = (newSortBy, newSortOrder) => {
+    setSortBy(newSortBy);
+    setSortOrder(newSortOrder);
+  };
+
+  // Handle filter change
+  const handleFilterChange = (filter) => {
+    setActiveFilter(filter);
+  };
+
+  // Get filtered and sorted tasks
+  const getFilteredAndSortedTasks = () => {
+    let filteredTasks = [...tasks];
+
+    // Apply filters
+    switch (activeFilter) {
+      case 'active':
+        filteredTasks = filteredTasks.filter(task => !task.completed);
+        break;
+      case 'completed':
+        filteredTasks = filteredTasks.filter(task => task.completed);
+        break;
+      case 'recurring':
+        filteredTasks = filteredTasks.filter(task => task.isRecurring);
+        break;
+      default:
+        // 'all' filter - show all tasks
+        break;
+    }
+
+    // Apply sorting
+    return filteredTasks.sort((a, b) => {
+      let comparison = 0;
+      
+      // Handle different sort criteria
+      if (sortBy === 'priority') {
+        const priorityOrder = { high: 3, medium: 2, low: 1, undefined: 0 };
+        comparison = (priorityOrder[a.priority] || 0) - (priorityOrder[b.priority] || 0);
+      } else if (sortBy === 'duration') {
+        comparison = (a.duration || 0) - (b.duration || 0);
+      } else if (sortBy === 'title') {
+        comparison = (a.title || '').localeCompare(b.title || '');
+      } else if (sortBy === 'category') {
+        comparison = (a.category || '').localeCompare(b.category || '');
+      }
+
+      // Reverse if sort order is descending
+      return sortOrder === 'desc' ? -comparison : comparison;
+    });
   };
 
   const handleKeyPress = useCallback((e) => {
@@ -446,7 +502,7 @@ export default function Dashboard({ onBackToLanding }) {
 
             {activeTab === 'tasks' && (
               <div>
-                <div className="flex justify-between items-center mb-6">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4">
                   <h2 className="text-xl font-semibold text-gray-900">Reusable Task Blocks</h2>
                   <button
                     onClick={() => setShowTaskCreator(true)}
@@ -457,6 +513,15 @@ export default function Dashboard({ onBackToLanding }) {
                     <span className="ml-2 text-xs opacity-75">(⌘N)</span>
                   </button>
                 </div>
+
+                {/* Task Controls */}
+                <TaskControls 
+                  sortBy={sortBy}
+                  sortOrder={sortOrder}
+                  onSortChange={handleSortChange}
+                  activeFilter={activeFilter}
+                  onFilterChange={handleFilterChange}
+                />
                 
                 {isLoading ? (
                   <div className="flex items-center justify-center py-12">
@@ -479,7 +544,7 @@ export default function Dashboard({ onBackToLanding }) {
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {tasks.map(task => (
+                    {getFilteredAndSortedTasks().map(task => (
                       <TaskBlock
                         key={task.id}
                         task={task}
