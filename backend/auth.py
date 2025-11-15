@@ -19,7 +19,7 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 security = HTTPBearer()
 
 # Database connection
-conn_string = "postgresql://postgres:founderdb2025$@db.yhemeqmzqprdasvchttj.supabase.co:5432/postgres"
+conn_string = "postgresql://postgres.yhemeqmzqprdasvchttj:Diligence2025%24%24@aws-1-us-east-2.pooler.supabase.com:6543/postgres"
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against its hash"""
@@ -69,6 +69,8 @@ def get_user_by_id(user_id: int) -> Optional[dict]:
 def create_user(email: str, name: str, password: str) -> dict:
     """Create a new user in the database"""
     password_hash = get_password_hash(password)
+    print("DEBUG password received:", repr(password))
+    print("DEBUG password length:", len(password))
     conn = psycopg2.connect(conn_string)
     with conn.cursor(cursor_factory=RealDictCursor) as cur:
         cur.execute("""

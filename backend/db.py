@@ -3,7 +3,7 @@ from psycopg2.extras import RealDictCursor
 from typing import List, Dict, Any
 
 # Connect to Supabase PostgreSQL
-conn_string = "postgresql://postgres:founderdb2025$@db.yhemeqmzqprdasvchttj.supabase.co:5432/postgres"
+conn_string = "postgresql://postgres.yhemeqmzqprdasvchttj:Diligence2025%24%24@aws-1-us-east-2.pooler.supabase.com:6543/postgres"
 
 def get_schedules():
     conn = psycopg2.connect(conn_string)
