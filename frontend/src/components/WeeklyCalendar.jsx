@@ -1,6 +1,8 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from 'lucide-react';
 
+const DRAG_DATA_FORMAT = 'application/x-diligence-task';
+
 export default function WeeklyCalendar({ 
   tasks, 
   selectedDate, 
@@ -9,7 +11,6 @@ export default function WeeklyCalendar({
   onScheduleTask,
   onDeleteScheduledTask 
 }) {
-  const [draggedTask, setDraggedTask] = useState(null);
   const [showTimeSlots, setShowTimeSlots] = useState(true);
   
   // Memoize the week dates to prevent unnecessary recalculations
@@ -47,23 +48,39 @@ export default function WeeklyCalendar({
     e.dataTransfer.dropEffect = 'move';
   }, []);
 
+  const extractDraggedTask = (dataTransfer) => {
+    if (!dataTransfer) return null;
+    const payload = dataTransfer.getData(DRAG_DATA_FORMAT) || dataTransfer.getData('application/json') || dataTransfer.getData('text/plain');
+    if (!payload) return null;
+    try {
+      return JSON.parse(payload);
+    } catch (error) {
+      console.error('Failed to parse drag payload', error);
+      return null;
+    }
+  };
+
   const handleDrop = useCallback(async (e, day, timeSlot) => {
     e.preventDefault();
-    
-    if (draggedTask) {
-      const newScheduledTask = {
-        ...draggedTask,
-        scheduledDay: day,
-        scheduledTime: timeSlot.hour,
-        endTime: timeSlot.hour + Math.ceil(draggedTask.duration / 60)
-      };
-      
-      if (onScheduleTask) {
-        await onScheduleTask(newScheduledTask);
-      }
-      setDraggedTask(null);
+    const draggedTask = extractDraggedTask(e.dataTransfer);
+    if (!draggedTask) {
+      return;
     }
-  }, [draggedTask, onScheduleTask]);
+
+    const durationMinutes = Number(draggedTask.duration) || 0;
+    const estimatedHours = Math.max(1, Math.ceil(durationMinutes / 60));
+
+    const newScheduledTask = {
+      ...draggedTask,
+      scheduledDay: day,
+      scheduledTime: timeSlot.hour,
+      endTime: timeSlot.hour + estimatedHours
+    };
+    
+    if (onScheduleTask) {
+      await onScheduleTask(newScheduledTask);
+    }
+  }, [onScheduleTask]);
   
   const handleDeleteScheduledTask = useCallback(async (e, taskId) => {
     e.stopPropagation();
