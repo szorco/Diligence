@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, Calendar, Clock, CheckCircle, BarChart3, Settings, User, Bell, Loader2, LogOut, ArrowUpDown, Filter } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Plus, Calendar, Clock, CheckCircle, BarChart3, Settings, User, Bell, Loader2, LogOut, Flame, Zap } from 'lucide-react';
 import TaskControls from './TaskControls';
 import { useAuth } from '../contexts/AuthContext';
 import { API_URL } from '../config';
@@ -8,6 +8,80 @@ import WeeklyCalendar from './WeeklyCalendar';
 import TaskCreator from './TaskCreator';
 import ProgressStats from './ProgressStats';
 import Notification from './Notification';
+
+const derivePriority = (task) => {
+  if (task.priority) {
+    return task.priority.toLowerCase();
+  }
+  const duration = Number(task.duration) || 0;
+  if (duration >= 120) return 'high';
+  if (duration >= 60) return 'medium';
+  return 'low';
+};
+
+const normalizeTask = (task) => {
+  const duration = Number(task.duration) || 0;
+  const createdAt = task.created_at || task.createdAt;
+  const updatedAt = task.updated_at || task.updatedAt;
+
+  return {
+    ...task,
+    duration,
+    color: task.color || 'bg-blue-500',
+    category: task.category || 'General',
+    isRecurring: task.is_recurring ?? task.isRecurring ?? false,
+    priority: derivePriority({ ...task, duration }),
+    createdAt: createdAt ? new Date(createdAt) : null,
+    updatedAt: updatedAt ? new Date(updatedAt) : null,
+  };
+};
+
+const normalizeScheduledTask = (task) => {
+  const scheduledDayValue = task.scheduledDay || task.scheduled_day;
+  const scheduledTimeValue = task.scheduledTime ?? task.scheduled_time ?? task.start_time;
+  const endTimeValue = task.endTime ?? task.end_time ?? task.finish_time;
+
+  return {
+    ...task,
+    scheduledDay: scheduledDayValue ? new Date(scheduledDayValue) : null,
+    scheduledTime: typeof scheduledTimeValue === 'number' ? scheduledTimeValue : scheduledTimeValue?.hour || 0,
+    endTime: typeof endTimeValue === 'number' ? endTimeValue : endTimeValue?.hour || null,
+    color: task.color || 'bg-blue-500',
+  };
+};
+
+const buildTaskPayload = (task, includeCompleted = false) => {
+  const payload = {
+    title: task.title,
+    description: task.description,
+    duration: Number(task.duration) || 0,
+    category: task.category,
+    color: task.color,
+    is_recurring: task.isRecurring ?? false,
+  };
+
+  if (includeCompleted) {
+    payload.completed = task.completed ?? false;
+  }
+
+  return payload;
+};
+
+const formatMinutes = (minutes) => {
+  const totalMinutes = Math.max(minutes, 0);
+  const hours = Math.floor(totalMinutes / 60);
+  const mins = totalMinutes % 60;
+  if (hours > 0) {
+    return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+  }
+  return `${mins}m`;
+};
+
+const combineDateAndHour = (dateValue, hour = 0) => {
+  if (!dateValue) return null;
+  const dateObj = dateValue instanceof Date ? dateValue : new Date(dateValue);
+  return new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate(), hour, 0, 0, 0);
+};
 
 export default function Dashboard({ onBackToLanding }) {
   const { user, logout, authenticatedFetch } = useAuth();
@@ -22,6 +96,49 @@ export default function Dashboard({ onBackToLanding }) {
   const [isLoading, setIsLoading] = useState(true);
   const [editingTask, setEditingTask] = useState(null);
   const [notification, setNotification] = useState(null);
+
+  const totalBlockedMinutes = useMemo(
+    () => tasks.reduce((acc, task) => acc + (Number(task.duration) || 0), 0),
+    [tasks]
+  );
+
+  const activeTaskCount = useMemo(
+    () => tasks.filter(task => !task.completed).length,
+    [tasks]
+  );
+
+  const recurringTaskCount = useMemo(
+    () => tasks.filter(task => task.isRecurring).length,
+    [tasks]
+  );
+
+  const averageTaskDuration = useMemo(() => {
+    if (tasks.length === 0) return '0m';
+    const averageMinutes = Math.round(totalBlockedMinutes / tasks.length);
+    return formatMinutes(averageMinutes);
+  }, [tasks, totalBlockedMinutes]);
+
+  const upcomingTask = useMemo(() => {
+    if (!scheduledTasks.length) return null;
+    const now = new Date();
+    const enriched = scheduledTasks
+      .map(task => ({
+        ...task,
+        startDateTime: combineDateAndHour(task.scheduledDay, task.scheduledTime)
+      }))
+      .filter(task => task.startDateTime && task.startDateTime >= now)
+      .sort((a, b) => a.startDateTime - b.startDateTime);
+    return enriched[0] || null;
+  }, [scheduledTasks]);
+
+  const handleStartFocusSession = useCallback(() => {
+    if (!upcomingTask) {
+      setNotification({ type: 'info', message: 'No scheduled blocks ready. Drag a task onto the calendar to queue one up.' });
+      return;
+    }
+    setActiveTab('calendar');
+    setNotification({ type: 'success', message: `Dialed in for ${upcomingTask.title}` });
+  }, [upcomingTask]);
 
   // API base URL is imported from config
 
@@ -43,7 +160,7 @@ export default function Dashboard({ onBackToLanding }) {
       // Handle tasks response
       if (tasksResponse.ok) {
         const tasksData = await tasksResponse.json();
-        setTasks(tasksData);
+        setTasks(tasksData.map(normalizeTask));
       } else {
         console.error('Failed to load tasks');
         // Fallback to sample data if API fails
@@ -69,19 +186,13 @@ export default function Dashboard({ onBackToLanding }) {
             completed: false
           }
         ];
-        setTasks(sampleTasks);
+        setTasks(sampleTasks.map(normalizeTask));
       }
 
       // Handle scheduled tasks response
       if (scheduledResponse.ok) {
         const scheduledData = await scheduledResponse.json();
-        // Convert string dates back to Date objects
-        const formattedScheduledTasks = scheduledData.map(task => ({
-          ...task,
-          scheduledDay: new Date(task.scheduledDay),
-          createdAt: task.createdAt ? new Date(task.createdAt) : null,
-          updatedAt: task.updatedAt ? new Date(task.updatedAt) : null
-        }));
+        const formattedScheduledTasks = scheduledData.map(normalizeScheduledTask);
         setScheduledTasks(formattedScheduledTasks);
       } else {
         console.error('Failed to load scheduled tasks');
@@ -112,14 +223,15 @@ export default function Dashboard({ onBackToLanding }) {
     try {
       if (editingTask) {
         // Update existing task
+        const payload = buildTaskPayload({ ...editingTask, ...newTask }, true);
         const response = await authenticatedFetch(`${API_URL}/tasks/${editingTask.id}`, {
           method: 'PUT',
-          body: JSON.stringify(newTask),
+          body: JSON.stringify(payload),
         });
         
         if (response.ok) {
-          const updatedTask = await response.json();
-          setTasks(tasks.map(task => 
+          const updatedTask = normalizeTask(await response.json());
+          setTasks(prevTasks => prevTasks.map(task => 
             task.id === editingTask.id ? updatedTask : task
           ));
           setEditingTask(null);
@@ -129,14 +241,15 @@ export default function Dashboard({ onBackToLanding }) {
         }
       } else {
         // Create new task
+        const payload = buildTaskPayload(newTask);
         const response = await authenticatedFetch(`${API_URL}/tasks`, {
           method: 'POST',
-          body: JSON.stringify(newTask),
+          body: JSON.stringify(payload),
         });
         
         if (response.ok) {
-          const createdTask = await response.json();
-          setTasks([...tasks, createdTask]);
+          const createdTask = normalizeTask(await response.json());
+          setTasks(prevTasks => [createdTask, ...prevTasks]);
           showNotification('Task created successfully!');
         } else {
           showNotification('Failed to create task', 'error');
@@ -171,18 +284,20 @@ export default function Dashboard({ onBackToLanding }) {
     try {
       const task = tasks.find(t => t.id === taskId);
       const updatedTask = { ...task, completed: !task.completed };
+      const payload = buildTaskPayload(updatedTask, true);
+      const wasCompleted = task?.completed;
       
       const response = await authenticatedFetch(`${API_URL}/tasks/${taskId}`, {
         method: 'PUT',
-        body: JSON.stringify(updatedTask),
+        body: JSON.stringify(payload),
       });
       
       if (response.ok) {
-        const result = await response.json();
-        setTasks(tasks.map(task => 
-          task.id === taskId ? result : task
+        const result = normalizeTask(await response.json());
+        setTasks(prevTasks => prevTasks.map(taskItem => 
+          taskItem.id === taskId ? result : taskItem
         ));
-        showNotification(task?.completed ? 'Task marked as incomplete' : 'Task completed! 🎉');
+        showNotification(wasCompleted ? 'Task marked as incomplete' : 'Task completed! 🎉');
       } else {
         showNotification('Failed to update task', 'error');
       }
@@ -198,14 +313,31 @@ export default function Dashboard({ onBackToLanding }) {
   };
 
   const handleDuplicateTask = (task) => {
-    const newTask = {
+    const duplicatePayload = {
       ...task,
-      id: Date.now(),
       title: `${task.title} (Copy)`,
-      completed: false
+      completed: false,
     };
-    setTasks(prevTasks => [...prevTasks, newTask]);
-    setNotification({ type: 'success', message: 'Task duplicated successfully' });
+
+    (async () => {
+      try {
+        const response = await authenticatedFetch(`${API_URL}/tasks`, {
+          method: 'POST',
+          body: JSON.stringify(buildTaskPayload(duplicatePayload)),
+        });
+
+        if (response.ok) {
+          const createdTask = normalizeTask(await response.json());
+          setTasks(prevTasks => [createdTask, ...prevTasks]);
+          setNotification({ type: 'success', message: 'Task duplicated successfully' });
+        } else {
+          setNotification({ type: 'error', message: 'Failed to duplicate task' });
+        }
+      } catch (error) {
+        console.error('Error duplicating task:', error);
+        setNotification({ type: 'error', message: 'Failed to duplicate task' });
+      }
+    })();
   };
 
   // Handle sort change
@@ -287,10 +419,6 @@ export default function Dashboard({ onBackToLanding }) {
     return () => window.removeEventListener('keydown', handleKeyPress);
   }, [handleKeyPress]);
 
-  const completedTasks = tasks.filter(task => task.completed).length;
-  const totalTasks = tasks.length;
-  const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
@@ -351,11 +479,11 @@ export default function Dashboard({ onBackToLanding }) {
           <div className="bg-white p-6 rounded-lg shadow-sm">
             <div className="flex items-center">
               <div className="p-2 bg-green-100 rounded-lg">
-                <CheckCircle className="text-green-600" size={24} />
+                <Clock className="text-green-600" size={24} />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Completed</p>
-                <p className="text-2xl font-bold text-gray-900">{completedTasks}</p>
+                <p className="text-sm font-medium text-gray-600">Time Blocked</p>
+                <p className="text-2xl font-bold text-gray-900">{formatMinutes(totalBlockedMinutes)}</p>
               </div>
             </div>
           </div>
@@ -363,11 +491,11 @@ export default function Dashboard({ onBackToLanding }) {
           <div className="bg-white p-6 rounded-lg shadow-sm">
             <div className="flex items-center">
               <div className="p-2 bg-purple-100 rounded-lg">
-                <BarChart3 className="text-purple-600" size={24} />
+                <CheckCircle className="text-purple-600" size={24} />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Completion Rate</p>
-                <p className="text-2xl font-bold text-gray-900">{completionRate}%</p>
+                <p className="text-sm font-medium text-gray-600">Active Blocks</p>
+                <p className="text-2xl font-bold text-gray-900">{activeTaskCount}</p>
               </div>
             </div>
           </div>
@@ -375,16 +503,68 @@ export default function Dashboard({ onBackToLanding }) {
           <div className="bg-white p-6 rounded-lg shadow-sm">
             <div className="flex items-center">
               <div className="p-2 bg-orange-100 rounded-lg">
-                <Clock className="text-orange-600" size={24} />
+                <BarChart3 className="text-orange-600" size={24} />
               </div>
               <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Time Blocked</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {Math.round(tasks.reduce((acc, task) => acc + task.duration, 0) / 60)}h
-                </p>
+                <p className="text-sm font-medium text-gray-600">Recurring Library</p>
+                <p className="text-2xl font-bold text-gray-900">{recurringTaskCount}</p>
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Focus Mode */}
+        <div className="bg-white p-6 rounded-lg shadow-sm mb-8">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <p className="text-sm font-medium text-gray-500">Focus Mode</p>
+              <h3 className="text-2xl font-bold text-gray-900">Stay Ahead of Your Next Block</h3>
+            </div>
+            <div className="flex space-x-2">
+              <button
+                onClick={handleStartFocusSession}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+              >
+                <Flame size={16} className="mr-2" />
+                Start Focus Session
+              </button>
+              <button
+                onClick={() => setActiveTab('tasks')}
+                className="px-4 py-2 border border-gray-200 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Manage Blocks
+              </button>
+            </div>
+          </div>
+          {upcomingTask ? (
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+              <div className="flex-1">
+                <p className="text-sm text-gray-500 mb-1">Up next</p>
+                <h4 className="text-xl font-semibold text-gray-900">{upcomingTask.title}</h4>
+                <p className="text-gray-600">
+                  {upcomingTask.category} • {formatMinutes(upcomingTask.duration || 0)} • {combineDateAndHour(upcomingTask.scheduledDay, upcomingTask.scheduledTime)?.toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' })}
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-center">
+                <div className="p-4 bg-blue-50 rounded-lg">
+                  <p className="text-xs uppercase text-blue-600 tracking-wide">Avg Duration</p>
+                  <p className="text-xl font-bold text-blue-900">{averageTaskDuration}</p>
+                </div>
+                <div className="p-4 bg-purple-50 rounded-lg">
+                  <p className="text-xs uppercase text-purple-600 tracking-wide">Active Blocks</p>
+                  <p className="text-xl font-bold text-purple-900">{activeTaskCount}</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between bg-gray-50 border border-dashed border-gray-200 rounded-lg p-6">
+              <div>
+                <p className="text-lg font-medium text-gray-900">No upcoming block scheduled</p>
+                <p className="text-gray-600">Drag a task block into the calendar to set up your next focus session.</p>
+              </div>
+              <Zap className="text-yellow-500" size={32} />
+            </div>
+          )}
         </div>
 
         {/* Navigation Tabs */}
@@ -456,7 +636,7 @@ export default function Dashboard({ onBackToLanding }) {
                           'Content-Type': 'application/json',
                         },
                         body: JSON.stringify({
-                          taskId: task.id,
+                          taskId: task.id || task.taskId,
                           scheduledDay: task.scheduledDay.toISOString(),
                           scheduledTime: task.scheduledTime,
                           endTime: task.endTime
@@ -465,11 +645,7 @@ export default function Dashboard({ onBackToLanding }) {
                       
                       if (response.ok) {
                         const newScheduledTask = await response.json();
-                        setScheduledTasks([...scheduledTasks, {
-                          ...newScheduledTask,
-                          scheduledDay: new Date(newScheduledTask.scheduledDay),
-                          ...tasks.find(t => t.id === task.id)
-                        }]);
+                        setScheduledTasks(prev => [...prev, normalizeScheduledTask(newScheduledTask)]);
                         setNotification({ type: 'success', message: 'Task scheduled successfully!' });
                       } else {
                         throw new Error('Failed to schedule task');
