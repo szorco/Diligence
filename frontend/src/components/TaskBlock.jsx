@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Clock, Calendar, Trash2, Edit3, Copy, CheckCircle, Flag } from 'lucide-react';
 
+const DRAG_DATA_FORMAT = 'application/x-diligence-task';
+
 export default function TaskBlock({ task, onDelete, onEdit, onDuplicate, onToggleComplete }) {
   const [isHovered, setIsHovered] = useState(false);
 
@@ -44,6 +46,11 @@ export default function TaskBlock({ task, onDelete, onEdit, onDuplicate, onToggl
     }
   };
 
+  const handleDragStart = (event) => {
+    event.dataTransfer.setData(DRAG_DATA_FORMAT, JSON.stringify(task));
+    event.dataTransfer.effectAllowed = 'move';
+  };
+
   return (
     <div
       className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 transition-all duration-200 hover:shadow-md ${
@@ -51,6 +58,9 @@ export default function TaskBlock({ task, onDelete, onEdit, onDuplicate, onToggl
       }`}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
+      draggable
+      onDragStart={handleDragStart}
+      role="listitem"
     >
       {/* Header */}
       <div className="flex items-start justify-between mb-3">
