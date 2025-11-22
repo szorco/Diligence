@@ -1,9 +1,19 @@
-from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi import FastAPI, HTTPException, Depends, status, Query
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, EmailStr
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, EmailStr, Field
 from typing import List, Optional
-from datetime import timedelta
-from db import get_schedules, create_task, get_tasks, update_task, delete_task
+from datetime import timedelta, date
+from db import (
+    get_schedules,
+    create_task,
+    get_tasks,
+    update_task,
+    delete_task,
+    get_scheduled_tasks,
+    create_scheduled_task,
+    delete_scheduled_task,
+)
 from auth import (
     authenticate_user, create_user, get_current_user, create_access_token,
     ACCESS_TOKEN_EXPIRE_MINUTES
@@ -60,6 +70,35 @@ class Task(TaskBase):
 
     class Config:
         from_attributes = True
+
+
+class ScheduledTaskBase(BaseModel):
+    task_id: int = Field(..., alias="taskId")
+    scheduled_day: date = Field(..., alias="scheduledDay")
+    scheduled_time: int = Field(..., alias="scheduledTime")
+    end_time: int = Field(..., alias="endTime")
+
+    class Config:
+        populate_by_name = True
+
+
+class ScheduledTaskCreate(ScheduledTaskBase):
+    pass
+
+
+class ScheduledTask(ScheduledTaskBase):
+    id: int
+    title: str
+    description: Optional[str] = None
+    duration: int
+    category: str
+    color: str
+    is_recurring: bool
+    completed: bool
+
+    class Config:
+        from_attributes = True
+        populate_by_name = True
 
 @app.get("/")
 def read_root():
@@ -124,3 +163,34 @@ def update_task_endpoint(task_id: int, task: TaskUpdate, current_user: dict = De
 @app.delete("/tasks/{task_id}")
 def delete_task_endpoint(task_id: int, current_user: dict = Depends(get_current_user)):
     return delete_task(task_id, current_user["id"])
+
+
+# Scheduled task endpoints
+@app.get("/scheduled-tasks", response_model=List[ScheduledTask])
+def get_scheduled_tasks_endpoint(
+    start_date: date = Query(..., alias="startDate"),
+    end_date: date = Query(..., alias="endDate"),
+    current_user: dict = Depends(get_current_user)
+):
+    if start_date > end_date:
+        raise HTTPException(status_code=400, detail="startDate must be before endDate")
+    return get_scheduled_tasks(current_user["id"], start_date, end_date)
+
+
+@app.post("/scheduled-tasks", response_model=ScheduledTask, status_code=status.HTTP_201_CREATED)
+def create_scheduled_task_endpoint(
+    scheduled_task: ScheduledTaskCreate,
+    current_user: dict = Depends(get_current_user)
+):
+    try:
+        return create_scheduled_task(scheduled_task, current_user["id"])
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+
+
+@app.delete("/scheduled-tasks/{schedule_id}")
+def delete_scheduled_task_endpoint(schedule_id: int, current_user: dict = Depends(get_current_user)):
+    deleted = delete_scheduled_task(schedule_id, current_user["id"])
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Scheduled task not found")
+    return JSONResponse({"status": "deleted"}, status_code=status.HTTP_200_OK)
