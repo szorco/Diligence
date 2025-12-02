@@ -14,7 +14,7 @@ A schedule planning website that provides users a quick and easy way to create d
 
 ## 📌 Main Features
 
-- ✅ Create daily and weekly schedules
+-  Create daily and weekly schedules
 - ♻️ Build reusable "task blocks" for recurring events
   - Example: User has 2 hours of soccer practice every day, but times vary → create a 2-hour "soccer practice" block and reuse it across the week
 - 🎯 Drag-and-drop scheduling for fast, intuitive planning
@@ -79,3 +79,4 @@ Set your API URL in the frontend (e.g., `src/config.js`):
 ```javascript
 export const API_URL = "http://127.0.0.1:8000"; // Local dev
 ```
+
