@@ -7,10 +7,16 @@ Run this script to initialize the database with the complete schema
 import psycopg2
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+load_dotenv(Path(__file__).parent / "backend" / ".env")
 
 def setup_database():
     # Database connection string - update this with your actual credentials
-    conn_string = "postgresql://postgres:founderdb2025$@db.yhemeqmzqprdasvchttj.supabase.co:5432/postgres"
+    conn_string = os.getenv("DATABASE_URL")
+    if not conn_string:
+        print("❌ DATABASE_URL is not set in backend/.env file")
+        return False
     
     # Read the SQL schema file
     sql_file = Path(__file__).parent / "database" / "complete_schema.sql"
