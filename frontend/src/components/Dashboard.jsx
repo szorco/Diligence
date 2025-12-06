@@ -150,11 +150,11 @@ export default function Dashboard({ onBackToLanding }) {
       startDate.setDate(selectedDate.getDate() - 7); // Get data for previous week
       const endDate = new Date(selectedDate);
       endDate.setDate(selectedDate.getDate() + 14); // And next two weeks
-      
+
       // Load regular tasks and scheduled tasks in parallel
       const [tasksResponse, scheduledResponse] = await Promise.all([
         authenticatedFetch(`${API_URL}/tasks`),
-        authenticatedFetch(`${API_URL}/scheduled-tasks?startDate=${startDate.toISOString()}&endDate=${endDate.toISOString()}`)
+        authenticatedFetch(`${API_URL}/scheduled-tasks?startDate=${startDate.toISOString().split('T')[0]}&endDate=${endDate.toISOString().split('T')[0]}`)
       ]);
 
       // Handle tasks response
@@ -228,10 +228,10 @@ export default function Dashboard({ onBackToLanding }) {
           method: 'PUT',
           body: JSON.stringify(payload),
         });
-        
+
         if (response.ok) {
           const updatedTask = normalizeTask(await response.json());
-          setTasks(prevTasks => prevTasks.map(task => 
+          setTasks(prevTasks => prevTasks.map(task =>
             task.id === editingTask.id ? updatedTask : task
           ));
           setEditingTask(null);
@@ -246,7 +246,7 @@ export default function Dashboard({ onBackToLanding }) {
           method: 'POST',
           body: JSON.stringify(payload),
         });
-        
+
         if (response.ok) {
           const createdTask = normalizeTask(await response.json());
           setTasks(prevTasks => [createdTask, ...prevTasks]);
@@ -267,7 +267,7 @@ export default function Dashboard({ onBackToLanding }) {
       const response = await authenticatedFetch(`${API_URL}/tasks/${taskId}`, {
         method: 'DELETE',
       });
-      
+
       if (response.ok) {
         setTasks(tasks.filter(task => task.id !== taskId));
         showNotification('Task deleted successfully!');
@@ -286,15 +286,15 @@ export default function Dashboard({ onBackToLanding }) {
       const updatedTask = { ...task, completed: !task.completed };
       const payload = buildTaskPayload(updatedTask, true);
       const wasCompleted = task?.completed;
-      
+
       const response = await authenticatedFetch(`${API_URL}/tasks/${taskId}`, {
         method: 'PUT',
         body: JSON.stringify(payload),
       });
-      
+
       if (response.ok) {
         const result = normalizeTask(await response.json());
-        setTasks(prevTasks => prevTasks.map(taskItem => 
+        setTasks(prevTasks => prevTasks.map(taskItem =>
           taskItem.id === taskId ? result : taskItem
         ));
         showNotification(wasCompleted ? 'Task marked as incomplete' : 'Task completed! 🎉');
@@ -374,7 +374,7 @@ export default function Dashboard({ onBackToLanding }) {
     // Apply sorting
     return filteredTasks.sort((a, b) => {
       let comparison = 0;
-      
+
       // Handle different sort criteria
       if (sortBy === 'priority') {
         const priorityOrder = { high: 3, medium: 2, low: 1, undefined: 0 };
@@ -426,7 +426,7 @@ export default function Dashboard({ onBackToLanding }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center">
-              <button 
+              <button
                 onClick={onBackToLanding}
                 className="mr-4 text-gray-400 hover:text-gray-600 transition"
               >
@@ -435,7 +435,7 @@ export default function Dashboard({ onBackToLanding }) {
               <div className="text-2xl font-bold text-blue-600">Diligence</div>
               <span className="ml-4 text-sm text-gray-500">Dashboard</span>
             </div>
-            
+
             <div className="flex items-center space-x-4">
               <button className="p-2 text-gray-400 hover:text-gray-600">
                 <Bell size={20} />
@@ -475,7 +475,7 @@ export default function Dashboard({ onBackToLanding }) {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white p-6 rounded-lg shadow-sm">
             <div className="flex items-center">
               <div className="p-2 bg-green-100 rounded-lg">
@@ -487,7 +487,7 @@ export default function Dashboard({ onBackToLanding }) {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white p-6 rounded-lg shadow-sm">
             <div className="flex items-center">
               <div className="p-2 bg-purple-100 rounded-lg">
@@ -499,7 +499,7 @@ export default function Dashboard({ onBackToLanding }) {
               </div>
             </div>
           </div>
-          
+
           <div className="bg-white p-6 rounded-lg shadow-sm">
             <div className="flex items-center">
               <div className="p-2 bg-orange-100 rounded-lg">
@@ -573,11 +573,10 @@ export default function Dashboard({ onBackToLanding }) {
             <nav className="flex space-x-8 px-6">
               <button
                 onClick={() => setActiveTab('calendar')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'calendar'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'calendar'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
               >
                 <Calendar className="inline mr-2" size={16} />
                 Calendar
@@ -585,11 +584,10 @@ export default function Dashboard({ onBackToLanding }) {
               </button>
               <button
                 onClick={() => setActiveTab('tasks')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'tasks'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'tasks'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
               >
                 <CheckCircle className="inline mr-2" size={16} />
                 Task Blocks
@@ -597,11 +595,10 @@ export default function Dashboard({ onBackToLanding }) {
               </button>
               <button
                 onClick={() => setActiveTab('progress')}
-                className={`py-4 px-1 border-b-2 font-medium text-sm ${
-                  activeTab === 'progress'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'progress'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
               >
                 <BarChart3 className="inline mr-2" size={16} />
                 Progress
@@ -612,67 +609,114 @@ export default function Dashboard({ onBackToLanding }) {
 
           <div className="p-6">
             {activeTab === 'calendar' && (
-              <div>
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900">Weekly Schedule</h2>
-                  <button
-                    onClick={() => setShowTaskCreator(true)}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center"
-                  >
-                    <Plus className="mr-2" size={16} />
-                    Add Task
-                  </button>
+              <div className="flex flex-col lg:flex-row gap-6">
+                {/* Task Sidebar */}
+                <div className="w-full lg:w-80 flex-shrink-0">
+                  <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 h-full">
+                    <div className="flex justify-between items-center mb-4">
+                      <h3 className="font-semibold text-gray-900">Task Blocks</h3>
+                      <button
+                        onClick={() => setShowTaskCreator(true)}
+                        className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                        title="Add Task"
+                      >
+                        <Plus size={20} />
+                      </button>
+                    </div>
+
+                    <div className="space-y-3 max-h-[calc(100vh-300px)] overflow-y-auto pr-2">
+                      {tasks.filter(t => !t.completed).length === 0 ? (
+                        <div className="text-center py-8 text-gray-500 text-sm">
+                          No active tasks. Create one to get started!
+                        </div>
+                      ) : (
+                        tasks
+                          .filter(t => !t.completed)
+                          .map(task => (
+                            <div key={task.id} className="transform transition hover:scale-102">
+                              <TaskBlock
+                                task={task}
+                                onDelete={handleDeleteTask}
+                                onEdit={handleEditTask}
+                                onDuplicate={handleDuplicateTask}
+                                onToggleComplete={handleToggleComplete}
+                              />
+                            </div>
+                          ))
+                      )}
+                    </div>
+
+                    <div className="mt-4 pt-4 border-t border-gray-100 text-xs text-gray-500 text-center">
+                      Drag tasks onto the calendar to schedule them
+                    </div>
+                  </div>
                 </div>
-                <WeeklyCalendar 
-                  tasks={tasks}
-                  selectedDate={selectedDate}
-                  onDateSelect={setSelectedDate}
-                  scheduledTasks={scheduledTasks}
-                  onScheduleTask={async (task) => {
-                    try {
-                      const response = await authenticatedFetch(`${API_URL}/scheduled-tasks`, {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                          taskId: task.id || task.taskId,
-                          scheduledDay: task.scheduledDay.toISOString(),
-                          scheduledTime: task.scheduledTime,
-                          endTime: task.endTime
-                        })
-                      });
-                      
-                      if (response.ok) {
-                        const newScheduledTask = await response.json();
-                        setScheduledTasks(prev => [...prev, normalizeScheduledTask(newScheduledTask)]);
-                        setNotification({ type: 'success', message: 'Task scheduled successfully!' });
-                      } else {
-                        throw new Error('Failed to schedule task');
+
+                {/* Calendar Area */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-semibold text-gray-900">Weekly Schedule</h2>
+                    <div className="lg:hidden">
+                      <button
+                        onClick={() => setShowTaskCreator(true)}
+                        className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center"
+                      >
+                        <Plus className="mr-2" size={16} />
+                        Add Task
+                      </button>
+                    </div>
+                  </div>
+                  <WeeklyCalendar
+                    tasks={tasks}
+                    selectedDate={selectedDate}
+                    onDateSelect={setSelectedDate}
+                    scheduledTasks={scheduledTasks}
+                    onScheduleTask={async (task) => {
+                      try {
+                        const response = await authenticatedFetch(`${API_URL}/scheduled-tasks`, {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({
+                            taskId: task.id || task.taskId,
+                            scheduledDay: task.scheduledDay.toISOString(),
+                            scheduledTime: task.scheduledTime,
+                            endTime: task.endTime
+                          })
+                        });
+
+                        if (response.ok) {
+                          const newScheduledTask = await response.json();
+                          setScheduledTasks(prev => [...prev, normalizeScheduledTask(newScheduledTask)]);
+                          setNotification({ type: 'success', message: 'Task scheduled successfully!' });
+                        } else {
+                          throw new Error('Failed to schedule task');
+                        }
+                      } catch (error) {
+                        console.error('Error scheduling task:', error);
+                        setNotification({ type: 'error', message: 'Failed to schedule task' });
                       }
-                    } catch (error) {
-                      console.error('Error scheduling task:', error);
-                      setNotification({ type: 'error', message: 'Failed to schedule task' });
-                    }
-                  }}
-                  onDeleteScheduledTask={async (taskId) => {
-                    try {
-                      const response = await authenticatedFetch(`${API_URL}/scheduled-tasks/${taskId}`, {
-                        method: 'DELETE'
-                      });
-                      
-                      if (response.ok) {
-                        setScheduledTasks(scheduledTasks.filter(t => t.id !== taskId));
-                        setNotification({ type: 'success', message: 'Scheduled task removed' });
-                      } else {
-                        throw new Error('Failed to delete scheduled task');
+                    }}
+                    onDeleteScheduledTask={async (taskId) => {
+                      try {
+                        const response = await authenticatedFetch(`${API_URL}/scheduled-tasks/${taskId}`, {
+                          method: 'DELETE'
+                        });
+
+                        if (response.ok) {
+                          setScheduledTasks(scheduledTasks.filter(t => t.id !== taskId));
+                          setNotification({ type: 'success', message: 'Scheduled task removed' });
+                        } else {
+                          throw new Error('Failed to delete scheduled task');
+                        }
+                      } catch (error) {
+                        console.error('Error deleting scheduled task:', error);
+                        setNotification({ type: 'error', message: 'Failed to remove scheduled task' });
                       }
-                    } catch (error) {
-                      console.error('Error deleting scheduled task:', error);
-                      setNotification({ type: 'error', message: 'Failed to remove scheduled task' });
-                    }
-                  }}
-                />
+                    }}
+                  />
+                </div>
               </div>
             )}
 
@@ -691,14 +735,14 @@ export default function Dashboard({ onBackToLanding }) {
                 </div>
 
                 {/* Task Controls */}
-                <TaskControls 
+                <TaskControls
                   sortBy={sortBy}
                   sortOrder={sortOrder}
                   onSortChange={handleSortChange}
                   activeFilter={activeFilter}
                   onFilterChange={handleFilterChange}
                 />
-                
+
                 {isLoading ? (
                   <div className="flex items-center justify-center py-12">
                     <Loader2 className="animate-spin text-blue-600" size={32} />

@@ -7,8 +7,15 @@ import DevTools from './components/DevTools';
 
 function App() {
   const [currentView, setCurrentView] = useState('landing'); // 'landing' or 'dashboard'
+  const [initialAuthMode, setInitialAuthMode] = useState('signup');
 
   const handleGetStarted = () => {
+    setInitialAuthMode('signup');
+    setCurrentView('dashboard');
+  };
+
+  const handleSignIn = () => {
+    setInitialAuthMode('login');
     setCurrentView('dashboard');
   };
 
@@ -20,9 +27,9 @@ function App() {
     <AuthProvider>
       <div style={{ position: 'relative', minHeight: '100vh' }}>
         {currentView === 'landing' ? (
-          <FigmaDesign onGetStarted={handleGetStarted} />
+          <FigmaDesign onGetStarted={handleGetStarted} onSignIn={handleSignIn} />
         ) : (
-          <ProtectedRoute onBackToLanding={handleBackToLanding}>
+          <ProtectedRoute onBackToLanding={handleBackToLanding} initialAuthMode={initialAuthMode}>
             <Dashboard onBackToLanding={handleBackToLanding} />
           </ProtectedRoute>
         )}
