@@ -3,8 +3,15 @@ from psycopg2.extras import RealDictCursor
 from typing import List, Dict, Any
 from datetime import date, time
 
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 # Connect to Supabase PostgreSQL
-conn_string = "postgresql://postgres:founderdb2025$@db.yhemeqmzqprdasvchttj.supabase.co:5432/postgres"
+conn_string = os.getenv("DATABASE_URL")
+if not conn_string:
+    raise ValueError("DATABASE_URL is not set in .env file")
 
 def get_schedules():
     conn = psycopg2.connect(conn_string)
