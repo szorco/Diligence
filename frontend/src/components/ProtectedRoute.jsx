@@ -3,9 +3,9 @@ import { useAuth } from '../contexts/AuthContext';
 import Login from './Login';
 import Signup from './Signup';
 
-export default function ProtectedRoute({ children, onBackToLanding }) {
+export default function ProtectedRoute({ children, onBackToLanding, initialAuthMode = 'signup' }) {
   const { isAuthenticated, isLoading, login, signup } = useAuth();
-  const [authMode, setAuthMode] = useState('signup');
+  const [authMode, setAuthMode] = useState(initialAuthMode);
 
   if (isLoading) {
     return (

@@ -4,7 +4,7 @@ import weeklyview from "../assets/weeklyview.png"
 import logo from "../assets/logo_diligence.png"
 
 
-export default function FigmaDesign({ onGetStarted }) {
+export default function FigmaDesign({ onGetStarted, onSignIn }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   return (
@@ -34,14 +34,14 @@ export default function FigmaDesign({ onGetStarted }) {
 
             {/* CTA Buttons */}
             <div className="hidden md:flex items-center space-x-4">
-              <button className="text-gray-700 hover:text-green-700 transition">Sign In</button>
-              <button className="bg-green-700 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
+              <button onClick={onSignIn} className="text-gray-700 hover:text-green-700 transition">Sign In</button>
+              <button onClick={onGetStarted} className="bg-green-700 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
                 Get Started
               </button>
             </div>
 
             {/* Mobile menu button */}
-            <button 
+            <button
               className="md:hidden"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
@@ -58,7 +58,7 @@ export default function FigmaDesign({ onGetStarted }) {
               <a href="#benefits" className="block text-gray-700 hover:text-green-700">Benefits</a>
               <a href="#pricing" className="block text-gray-700 hover:text-green-700">Pricing</a>
               <a href="#contact" className="block text-gray-700 hover:text-green-700">Contact</a>
-              <button className="w-full bg-green-700 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition mt-4">
+              <button onClick={onGetStarted} className="w-full bg-green-700 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition mt-4">
                 Get Started
               </button>
             </div>
@@ -77,7 +77,7 @@ export default function FigmaDesign({ onGetStarted }) {
               The ultimate productivity platform that helps teams collaborate, track progress, and achieve their goals efficiently.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <button  
+              <button
                 onClick={onGetStarted}
                 className="bg-green-700 text-white px-8 py-4 rounded-lg hover:bg-blue-700 transition flex items-center justify-center text-lg font-semibold"
               >
@@ -176,7 +176,7 @@ export default function FigmaDesign({ onGetStarted }) {
             <div className="bg-gradient-to-br from-emerald-400 to-green-700 rounded-2xl p-8 text-white shadow-2xl">
               <h3 className="text-3xl font-bold mb-4">Ready to get started?</h3>
               <p className="text-blue-100 mb-6 text-lg">Join thousands of teams already using Diligence</p>
-              <button 
+              <button
                 onClick={onGetStarted}
                 className="bg-white text-green-700 px-8 py-4 rounded-lg hover:bg-gray-100 transition font-semibold w-full"
               >
