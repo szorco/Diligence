@@ -91,3 +91,52 @@ def delete_task(task_id: int, user_id: int) -> bool:
     conn.close()
     return deleted_rows > 0
 
+def get_scheduled_tasks(user_id: int, start_date: str, end_date: str):
+    conn = psycopg2.connect(conn_string)
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute("""
+            SELECT st.id, st.task_id, st.user_id, st.scheduled_day, st.scheduled_time,
+                   st.end_time, t.title, t.color, t.duration
+            FROM scheduled_tasks st
+            JOIN tasks t ON st.task_id = t.id
+            WHERE st.user_id = %s
+              AND st.scheduled_day BETWEEN %s AND %s
+            ORDER BY st.scheduled_day, st.scheduled_time
+        """, (user_id, start_date, end_date))
+        result = cur.fetchall()
+    conn.close()
+    return [dict(row) for row in result]
+
+
+def create_scheduled_task(user_id: int, task_id: int, scheduled_day: str, scheduled_time: float, end_time: float):
+    conn = psycopg2.connect(conn_string)
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute("""
+            INSERT INTO scheduled_tasks (user_id, task_id, scheduled_day, scheduled_time, end_time)
+            VALUES (%s, %s, %s, %s, %s)
+            RETURNING id, user_id, task_id, scheduled_day, scheduled_time, end_time
+        """, (
+            user_id,
+            task_id,
+            scheduled_day,
+            scheduled_time,
+            end_time,
+        ))
+        result = cur.fetchone()
+        conn.commit()
+    conn.close()
+    return dict(result)
+
+
+def delete_scheduled_task(schedule_id: int, user_id: int):
+    conn = psycopg2.connect(conn_string)
+    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+        cur.execute("""
+            DELETE FROM scheduled_tasks
+            WHERE id = %s AND user_id = %s
+        """, (schedule_id, user_id))
+        deleted = cur.rowcount
+        conn.commit()
+    conn.close()
+    return deleted > 0
+

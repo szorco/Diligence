@@ -29,6 +29,8 @@ export default function Dashboard({ onBackToLanding }) {
       startDate.setDate(selectedDate.getDate() - 7); // Get data for previous week
       const endDate = new Date(selectedDate);
       endDate.setDate(selectedDate.getDate() + 14); // And next two weeks
+
+      console.log('🗓️ Rendering Dashboard with scheduledTasks:', scheduledTasks);
       
       // Load regular tasks and scheduled tasks in parallel
       const [tasksResponse, scheduledResponse] = await Promise.all([
@@ -71,13 +73,20 @@ export default function Dashboard({ onBackToLanding }) {
       // Handle scheduled tasks response
       if (scheduledResponse.ok) {
         const scheduledData = await scheduledResponse.json();
-        // Convert string dates back to Date objects
+        console.log('📥 Raw scheduled data from API:', scheduledData);
+
         const formattedScheduledTasks = scheduledData.map(task => ({
-          ...task,
-          scheduledDay: new Date(task.scheduledDay),
-          createdAt: task.createdAt ? new Date(task.createdAt) : null,
-          updatedAt: task.updatedAt ? new Date(task.updatedAt) : null
+          id: task.id,
+          task_id: task.task_id,
+          user_id: task.user_id,
+          scheduledDay: new Date(task.scheduled_day),  // Convert to Date and use camelCase
+          scheduledTime: task.scheduled_time,          // Convert to camelCase
+          endTime: task.end_time,                      // Convert to camelCase
+          title: task.title,
+          color: task.color,
+          duration: task.duration
         }));
+        console.log('✨ Formatted scheduled tasks:', formattedScheduledTasks);
         setScheduledTasks(formattedScheduledTasks);
       } else {
         console.error('Failed to load scheduled tasks');
@@ -375,54 +384,91 @@ export default function Dashboard({ onBackToLanding }) {
           </div>
 
           <div className="p-6">
-            {activeTab === 'calendar' && (
-              <div>
-                <div className="flex justify-between items-center mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900">Weekly Schedule</h2>
-                  <button
-                    onClick={() => setShowTaskCreator(true)}
-                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center"
-                  >
-                    <Plus className="mr-2" size={16} />
-                    Add Task
-                  </button>
+            {activeTab === 'calendar' && ( 
+              <div className="flex gap-6">
+
+                {/* LEFT SIDE — TASK BLOCKS (DRAG FROM HERE) */}
+                <div className="w-1/3 bg-white p-4 rounded-lg shadow-sm h-fit max-h-[85vh] overflow-y-auto">
+                  <h2 className="text-lg font-semibold mb-4">Task Blocks</h2>
+
+                  {tasks.length === 0 ? (
+                    <p className="text-gray-500">No task blocks available.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {tasks.map(task => (
+                        <TaskBlock
+                          key={task.id}
+                          task={task}
+                          onDelete={handleDeleteTask}
+                          onEdit={handleEditTask}
+                          onDuplicate={handleDuplicateTask}
+                          onToggleComplete={handleToggleComplete}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
-                <WeeklyCalendar 
-                  tasks={tasks}
-                  selectedDate={selectedDate}
-                  onDateSelect={setSelectedDate}
-                  scheduledTasks={scheduledTasks}
-                  onScheduleTask={async (task) => {
-                    try {
-                      const response = await authenticatedFetch(`${API_URL}/scheduled-tasks`, {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify({
-                          taskId: task.id,
-                          scheduledDay: task.scheduledDay.toISOString(),
-                          scheduledTime: task.scheduledTime,
-                          endTime: task.endTime
-                        })
-                      });
-                      
-                      if (response.ok) {
-                        const newScheduledTask = await response.json();
-                        setScheduledTasks([...scheduledTasks, {
-                          ...newScheduledTask,
-                          scheduledDay: new Date(newScheduledTask.scheduledDay),
-                          ...tasks.find(t => t.id === task.id)
-                        }]);
-                        setNotification({ type: 'success', message: 'Task scheduled successfully!' });
-                      } else {
-                        throw new Error('Failed to schedule task');
+
+                {/* RIGHT SIDE — WEEKLY CALENDAR (DROP INTO HERE) */}
+                <div className="flex-1">
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-xl font-semibold text-gray-900">Weekly Schedule</h2>
+
+                    <button
+                      onClick={() => setShowTaskCreator(true)}
+                      className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center"
+                    >
+                      <Plus className="mr-2" size={16} />
+                      Add Task
+                    </button>
+                  </div>
+
+                  <WeeklyCalendar 
+                    tasks={tasks}
+                    selectedDate={selectedDate}
+                    onDateSelect={setSelectedDate}
+                    scheduledTasks={scheduledTasks}
+
+                    onScheduleTask={async (task) => {
+                      console.log('🎯 DRAG: Task dropped:', task);
+                      try {
+                        const response = await authenticatedFetch(`${API_URL}/scheduled-tasks`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({
+                            taskId: task.id,
+                            scheduledDay: task.scheduledDay.toISOString(),
+                            scheduledTime: task.scheduledTime,
+                            endTime: task.endTime
+                          })
+                        });
+
+                        if (response.ok) {
+                          const newScheduledTask = await response.json();
+                          console.log('✅ API Response:', newScheduledTask);
+                          setScheduledTasks([
+                            ...scheduledTasks,
+                            {
+                              ...newScheduledTask,
+                              scheduledDay: new Date(newScheduledTask.scheduledDay),
+                              ...tasks.find(t => t.id === task.id)
+                            }
+                          ]);
+
+                          setNotification({ 
+                            type: 'success', 
+                            message: 'Task scheduled successfully!' 
+                          });
+                        }
+                      } catch (error) {
+                        console.error('Error scheduling task:', error);
+                        setNotification({ 
+                          type: 'error', 
+                          message: 'Failed to schedule task' 
+                        });
                       }
-                    } catch (error) {
-                      console.error('Error scheduling task:', error);
-                      setNotification({ type: 'error', message: 'Failed to schedule task' });
-                    }
-                  }}
+                    }}
+
                   onDeleteScheduledTask={async (taskId) => {
                     try {
                       const response = await authenticatedFetch(`${API_URL}/scheduled-tasks/${taskId}`, {
@@ -442,8 +488,9 @@ export default function Dashboard({ onBackToLanding }) {
                   }}
                 />
               </div>
+            </div>
             )}
-
+            
             {activeTab === 'tasks' && (
               <div>
                 <div className="flex justify-between items-center mb-6">

@@ -48,6 +48,11 @@ cd diligence
 
 ```bash
 cd backend
+
+#Activate Virtual Environment (Windows Powershell)
+venv\Scripts\Activate 
+
+#install requirements/dependecies and run the backend
 pip install -r requirements.txt
 uvicorn main:app --reload
 ```

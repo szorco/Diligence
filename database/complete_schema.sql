@@ -53,6 +53,20 @@ CREATE TABLE IF NOT EXISTS schedules (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- 4B.  scheduled_tasks
+-- =============================================
+--  This NEW table supports drag-and-drop scheduling
+--           using scheduled_day + scheduled_time + end_time
+CREATE TABLE IF NOT EXISTS scheduled_tasks (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,   
+    task_id INTEGER REFERENCES tasks(id) ON DELETE CASCADE,    
+    scheduled_day DATE NOT NULL,                               
+    scheduled_time FLOAT NOT NULL,                             
+    end_time FLOAT NOT NULL,                                   
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP             
+);
+
 -- 5. CREATE INDEXES FOR PERFORMANCE
 -- =============================================
 -- Users table indexes
@@ -72,6 +86,10 @@ CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON user_sessions(expires_at);
 -- Schedules table indexes
 CREATE INDEX IF NOT EXISTS idx_schedules_user_id ON schedules(user_id);
 CREATE INDEX IF NOT EXISTS idx_schedules_date ON schedules(scheduled_date);
+
+-- Scheduled_tasks indexes
+CREATE INDEX IF NOT EXISTS idx_scheduled_tasks_user_id ON scheduled_tasks(user_id);   
+CREATE INDEX IF NOT EXISTS idx_scheduled_tasks_day ON scheduled_tasks(scheduled_day); 
 
 -- 6. INSERT SAMPLE DATA (for testing)
 -- =============================================
@@ -96,7 +114,6 @@ BEGIN
     INSERT INTO tasks (user_id, title, description, duration, category, color, is_recurring) VALUES
     (demo_user_id, 'Soccer Practice', 'Team practice session', 120, 'Sports', 'bg-green-500', true),
     (demo_user_id, 'Study Session', 'Math and science review', 90, 'Education', 'bg-blue-500', false),
-    (demo_user_id, 'Gym Workout', 'Strength training routine', 60, 'Fitness', 'bg-red-500', true),
     (demo_user_id, 'Project Meeting', 'Weekly team sync', 45, 'Work', 'bg-purple-500', false),
     (demo_user_id, 'Morning Run', 'Cardio exercise', 30, 'Fitness', 'bg-orange-500', true),
     (demo_user_id, 'Code Review', 'Review team code submissions', 60, 'Work', 'bg-indigo-500', false)

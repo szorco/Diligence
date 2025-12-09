@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, EmailStr
 from typing import List, Optional
 from datetime import timedelta
+from datetime import date
 from db import get_schedules, create_task, get_tasks, update_task, delete_task
 from auth import (
     authenticate_user, create_user, get_current_user, create_access_token,
@@ -14,7 +15,8 @@ app = FastAPI()
 # Allow React frontend to access backend
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["*"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"]
 )
@@ -60,6 +62,30 @@ class Task(TaskBase):
 
     class Config:
         from_attributes = True
+
+class ScheduledTaskBase(BaseModel):
+    taskId: int
+    scheduledDay: str  # Frontend sends string
+    scheduledTime: float
+    endTime: float
+
+class ScheduledTaskCreate(ScheduledTaskBase):
+    pass
+
+class ScheduledTaskOut(BaseModel):
+    id: int
+    task_id: int
+    user_id: int
+    scheduled_day: date  # Changed from str to date - database returns date object
+    scheduled_time: float
+    end_time: float
+
+    class Config:
+        from_attributes = True
+        # This allows automatic conversion of date to string in JSON response
+        json_encoders = {
+            date: lambda v: v.isoformat()
+        }
 
 @app.get("/")
 def read_root():
@@ -124,3 +150,30 @@ def update_task_endpoint(task_id: int, task: TaskUpdate, current_user: dict = De
 @app.delete("/tasks/{task_id}")
 def delete_task_endpoint(task_id: int, current_user: dict = Depends(get_current_user)):
     return delete_task(task_id, current_user["id"])
+
+from db import create_scheduled_task, get_scheduled_tasks, delete_scheduled_task
+
+@app.get("/scheduled-tasks", response_model=List[ScheduledTaskOut])
+def list_scheduled_tasks(startDate: str, endDate: str, current_user: dict = Depends(get_current_user)):
+    return get_scheduled_tasks(current_user["id"], startDate, endDate)
+
+
+@app.post("/scheduled-tasks", response_model=ScheduledTaskOut)
+def create_scheduled_task_endpoint(data: ScheduledTaskCreate, current_user: dict = Depends(get_current_user)):
+    return create_scheduled_task(
+        user_id=current_user["id"],
+        task_id=data.taskId,
+        scheduled_day=data.scheduledDay,
+        scheduled_time=data.scheduledTime,
+        end_time=data.endTime
+    )
+
+
+@app.delete("/scheduled-tasks/{task_id}")
+def delete_scheduled_task_endpoint(task_id: int, current_user: dict = Depends(get_current_user)):
+    success = delete_scheduled_task(task_id, current_user["id"])
+    if not success:
+        raise HTTPException(status_code=404, detail="Scheduled task not found")
+    return {"success": True}
+
+

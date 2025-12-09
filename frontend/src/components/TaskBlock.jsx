@@ -1,8 +1,18 @@
 import React, { useState } from 'react';
 import { Clock, Calendar, Trash2, Edit3, Copy, CheckCircle, Flag } from 'lucide-react';
+import { useDrag } from "react-dnd";
 
 export default function TaskBlock({ task, onDelete, onEdit, onDuplicate, onToggleComplete }) {
   const [isHovered, setIsHovered] = useState(false);
+
+  
+  const [{ isDragging }, dragRef] = useDrag(() => ({
+    type: "TASK_BLOCK",
+    item: { task }, 
+    collect: (monitor) => ({
+      isDragging: monitor.isDragging(),
+    }),
+  })); 
 
   const getPriorityColor = (priority) => {
     switch (priority?.toLowerCase()) {
@@ -46,9 +56,13 @@ export default function TaskBlock({ task, onDelete, onEdit, onDuplicate, onToggl
 
   return (
     <div
-      className={`bg-white rounded-lg shadow-sm border border-gray-200 p-4 transition-all duration-200 hover:shadow-md ${
-        task.completed ? 'opacity-75' : ''
-      }`}
+      ref={dragRef}  
+      className={`
+        bg-white rounded-lg shadow-sm border border-gray-200 p-4
+        transition-all duration-200 hover:shadow-md cursor-grab active:cursor-grabbing
+        ${task.completed ? 'opacity-75' : ''}
+        ${isDragging ? 'opacity-50' : ''}
+      `}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
